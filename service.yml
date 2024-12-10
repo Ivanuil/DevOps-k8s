@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: friend-alert-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: friend-alert-bot
+  template:
+    metadata:
+      labels:
+        app: friend-alert-bot
+    spec:
+      containers:
+        - name: friend-alert-bot
+          image: ivanuil/friend-alert-bot:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: school21-platform-credentials
+                optional: false
+              prefix: username
+
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres:15432/friend-alert-db
+            - name: CLICKHOUSE_URL
+              value: http://clickhouse:8123
+            - name: school21.platform.username
+              valueFrom:
+                secretKeyRef:
+                  name: school21-platform-credentials
+                  key: username
+            - name: school21.platform.password
+              valueFrom:
+                secretKeyRef:
+                  name: school21-platform-credentials
+                  key: password
+            - name: telegram.bot.token
+              valueFrom:
+                secretKeyRef:
+                  name: telegram-bot
+                  key: token
+          imagePullPolicy: Always
+
+---
+
+apiVersion: v1
+
+kind: Service
+metadata:
+  name: friend-alert-bot
+spec:
+  selector:
+    app: friend-alert-bot
+  ports:
+    - port: 8181
+      targetPort: 8080
+  type: LoadBalancer
